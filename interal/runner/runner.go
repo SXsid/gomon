@@ -70,7 +70,7 @@ func (rn *Runner) Stop() {
 	time.Sleep(100 * time.Millisecond)
 	if process.Signal(syscall.Signal(0)) == nil {
 		_ = process.Kill()
-		 r.cmd.Wait()
+		 rn.cmd.Wait()
 	}
 	color.Yellow("Stopped application (PID: %d) after running for %v", process.Pid, time.Since(rn.started))
 	rn.cmd = nil
