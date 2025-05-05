@@ -17,10 +17,14 @@ type Config struct {
 func NewConfig() *Config {
 
 	config := &Config{
-		WatchDir:      ".",
-		BuildCMD:      "go build -o ./temp/gomonexe ./cmd/gomon",
-		RunCMD:        "./temp/gomonexe",
-		IgnorePattern: []string{"*/.git/*", "*/temp/*", "*/venodr/*"},
+		WatchDir: ".",
+		IgnorePattern: []string{
+			"temp", "temp/*", // Ignore the temp directory and all its contents
+			".git/*", "node_modules/*", "vendor/*",
+			"*.exe", "*.tmp", "*.log",
+		},
+		BuildCMD: "",
+		RunCMD:   "./temp/gomonexe",
 	}
 
 	flag.StringVar(&config.WatchDir, "dir", config.WatchDir, "Directory to keep eye on")

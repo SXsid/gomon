@@ -9,6 +9,7 @@ import (
 	"time"
 
 	config "github.com/SXsid/gomon/interal/Config"
+	"github.com/fatih/color"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -18,7 +19,7 @@ type FileWatcher struct {
 	lastEvent    time.Time
 	fsWatcher    *fsnotify.Watcher
 	eventChannel chan struct{} //this is the common chaneel across the file
-	doneChannel  chan struct{} // to shudown the watcher
+	DoneChannel  chan struct{} // to shudown the watcher
 }
 
 func NewWatcher(eventChan chan struct{}, Cfg *config.Config) (*FileWatcher, error) {
@@ -30,7 +31,7 @@ func NewWatcher(eventChan chan struct{}, Cfg *config.Config) (*FileWatcher, erro
 	return &FileWatcher{
 		config:       Cfg,
 		eventChannel: eventChan,
-		doneChannel:  make(chan struct{}),
+		DoneChannel:  make(chan struct{}),
 		fsWatcher:    fsWatcher,
 		isDebouncing: false,
 		lastEvent:    time.Now(),
@@ -39,6 +40,7 @@ func NewWatcher(eventChan chan struct{}, Cfg *config.Config) (*FileWatcher, erro
 }
 
 func (fw *FileWatcher) Start() error {
+	log.Println("watching the file")
 	err := filepath.Walk(fw.config.WatchDir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -59,6 +61,8 @@ func (fw *FileWatcher) Start() error {
 			}
 		}
 		if info.IsDir() {
+			color.Yellow("Watching directory: %s", path)
+
 			if err := fw.fsWatcher.Add(path); err != nil {
 				return err
 			}
@@ -87,6 +91,8 @@ func (fw *FileWatcher) Watchevent() {
 				return
 			}
 
+			log.Printf("[DEBUG] Raw event: %+v", events)
+
 			if !shouldWatchFile(events.Name) {
 				//ignore
 				continue
@@ -111,7 +117,10 @@ func (fw *FileWatcher) Watchevent() {
 				}
 			}
 
-			fw.handleEvents()
+			if events.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) != 0 {
+				log.Printf("Detected change: %s [%s]", events.Name, events.Op)
+				fw.handleEvents()
+			}
 
 		case err, ok := <-fw.fsWatcher.Errors:
 			if !ok {
@@ -119,7 +128,7 @@ func (fw *FileWatcher) Watchevent() {
 			}
 			log.Printf("Error watching files: %v", err)
 
-		case <-fw.doneChannel:
+		case <-fw.DoneChannel:
 			//kill the process by maintainer
 			return
 		}
@@ -174,7 +183,8 @@ func (fw *FileWatcher) handleEvents() {
 						return
 					}
 					//stop the routine on if parent is stopped
-				case <-fw.doneChannel:
+				case <-fw.DoneChannel:
+					color.Red("it done now shutting down")
 					return
 				}
 
