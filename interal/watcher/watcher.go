@@ -91,8 +91,6 @@ func (fw *FileWatcher) Watchevent() {
 				return
 			}
 
-			log.Printf("[DEBUG] Raw event: %+v", events)
-
 			if !shouldWatchFile(events.Name) {
 				//ignore
 				continue
@@ -118,7 +116,7 @@ func (fw *FileWatcher) Watchevent() {
 			}
 
 			if events.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) != 0 {
-				log.Printf("Detected change: %s [%s]", events.Name, events.Op)
+
 				fw.handleEvents()
 			}
 

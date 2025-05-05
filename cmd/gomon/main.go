@@ -37,10 +37,10 @@ This will watch your Go files, rebuild the binary, and restart on changes.
 	cfg := config.NewConfig()
 	if runtime.GOOS == "windows" {
 		cfg.BuildCMD = fmt.Sprintf("go build -o .\\temp\\gomon.exe %s", args[1])
-		cfg.RunCMD = ".\\temp\\gomonexe.exe"
+		cfg.RunCMD = ".\\temp\\gomon.exe"
 	} else {
-		cfg.BuildCMD = fmt.Sprintf("go build -o ./temp/gomonexe.exe %s", args[1])
-		cfg.RunCMD = "./temp/gomonexe"
+		cfg.BuildCMD = fmt.Sprintf("go build -o ./temp/gomon.exe %s", args[1])
+		cfg.RunCMD = "./temp/gomon.exe"
 	}
 
 	appRunner := runner.NewRunner(cfg)
@@ -72,7 +72,7 @@ This will watch your Go files, rebuild the binary, and restart on changes.
 		case sig := <-signalCahn:
 			color.Yellow("\n⛔ Received signal %v, shutting down...", sig)
 			appRunner.Stop()
-			watcher.DoneChannel <- struct{}{}
+			close(watcher.DoneChannel)
 			return
 
 		}

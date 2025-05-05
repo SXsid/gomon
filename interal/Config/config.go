@@ -1,7 +1,5 @@
 package config
 
-import "flag"
-
 type Config struct {
 	WatchDir string
 
@@ -24,12 +22,8 @@ func NewConfig() *Config {
 			"*.exe", "*.tmp", "*.log",
 		},
 		BuildCMD: "",
-		RunCMD:   "./temp/gomonexe",
+		RunCMD:   "",
 	}
-
-	flag.StringVar(&config.WatchDir, "dir", config.WatchDir, "Directory to keep eye on")
-	flag.StringVar(&config.BuildCMD, "buildCommand", config.BuildCMD, "command to build the applicaton")
-	flag.StringVar(&config.RunCMD, "runCommand", config.RunCMD, "command to build the applicaton")
 
 	return config
 }
