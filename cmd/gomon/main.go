@@ -31,6 +31,7 @@ Example:
 
 This will watch your Go files, rebuild the binary, and restart on changes.
 `)
+		return
 	}
 	printBanner()
 	cfg := config.NewConfig()
