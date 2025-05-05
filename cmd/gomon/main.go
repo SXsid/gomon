@@ -36,10 +36,10 @@ This will watch your Go files, rebuild the binary, and restart on changes.
 	printBanner()
 	cfg := config.NewConfig()
 	if runtime.GOOS == "windows" {
-		cfg.BuildCMD = fmt.Sprintf("go build -o .\\temp\\gomonexe.exe %s", args[1])
+		cfg.BuildCMD = fmt.Sprintf("go build -o .\\temp\\gomon.exe %s", args[1])
 		cfg.RunCMD = ".\\temp\\gomonexe.exe"
 	} else {
-		cfg.BuildCMD = fmt.Sprintf("go build -o ./temp/gomonexe %s", args[1])
+		cfg.BuildCMD = fmt.Sprintf("go build -o ./temp/gomon.exe %s", args[1])
 		cfg.RunCMD = "./temp/gomonexe"
 	}
 
