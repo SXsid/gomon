@@ -18,8 +18,18 @@ func main() {
 	//r
 	// fomon <paht of main.go file>
 	args := os.Args
-	if len(args) != 2 {
-		log.Fatalf("not a valid command")
+	if len(args) != 2 || args[1] == "--help" || args[1] == "-h" {
+		fmt.Println(`
+gomon - Hot reload for Go applications
+
+Usage:
+  gomon <path-to-main.go>
+
+Example:
+  gomon ./main.go
+
+This will watch your Go files, rebuild the binary, and restart on changes.
+`)return
 	}
 	printBanner()
 	cfg := config.NewConfig()
