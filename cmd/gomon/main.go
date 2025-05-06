@@ -24,7 +24,7 @@ func main() {
 	if err != nil {
 		return
 	}
-	fmt.Println(cfg.Port)
+
 	appRunner := runner.NewRunner(cfg)
 
 	appBuilder := builder.NewBuilder(cfg)

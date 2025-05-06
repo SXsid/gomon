@@ -24,15 +24,17 @@ func NewRunner(cfg *config.Config) *Runner {
 }
 
 func (rn *Runner) Run() error {
-
 	if rn.cmd != nil && rn.cmd.Process != nil {
 		rn.Stop()
 
+		// Wait for process to fully terminate before continuing
 		if rn.config.IsWindows {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(300 * time.Millisecond)
 			if rn.config.Port != "" {
-				forcePortCleanup(rn)
 
+				if err := forcePortCleanup(rn.config.Port); err != nil {
+					color.Yellow("Warning during port cleanup: %v", err)
+				}
 			}
 		}
 	}
@@ -47,9 +49,9 @@ func (rn *Runner) Run() error {
 	rn.cmd = exec.Command(commands[0], commands[1:]...)
 	rn.cmd.Stdout = os.Stdout
 	rn.cmd.Stderr = os.Stderr
-	//resue the tcp port
+
 	if rn.config.IsWindows && rn.config.Port != "" {
-		rn.cmd.Env = append(rn.cmd.Env, "SO_REUSEADDR=1")
+		rn.cmd.Env = append(os.Environ(), rn.cmd.Env...)
 	}
 
 	if err := rn.cmd.Start(); err != nil {
@@ -66,7 +68,6 @@ func (rn *Runner) Run() error {
 
 		if rn.cmd != nil {
 			if err != nil {
-
 				if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != -1 {
 					color.Yellow("Application exited with error: %v after %v", err, time.Since(rn.started))
 				} else {
@@ -89,9 +90,16 @@ func (rn *Runner) Stop() {
 
 	process := rn.cmd.Process
 	pid := process.Pid
+
+	port := ""
+	if rn.config.IsWindows && rn.config.Port != "" {
+		port = rn.config.Port
+	}
+
 	defer func() {
 		rn.cmd = nil
 	}()
+
 	var err error
 
 	if rn.config.IsWindows {
@@ -99,9 +107,14 @@ func (rn *Runner) Stop() {
 	} else {
 		err = process.Signal(syscall.SIGTERM)
 	}
+
 	if err != nil {
-		// Process already gone
+
 		color.Yellow("Process already terminated")
+
+		if port != "" {
+			forcePortCleanup(port)
+		}
 		return
 	}
 
@@ -117,8 +130,13 @@ func (rn *Runner) Stop() {
 	select {
 	case <-done:
 		color.Yellow("Stopped application (PID: %d) gracefully after running for %v", pid, time.Since(rn.started))
+
+		if port != "" {
+			time.Sleep(100 * time.Millisecond)
+			forcePortCleanup(port)
+		}
 	case <-timeout:
-		// Process didn't exit gracefully, force kill it
+
 		var err error
 		if rn.config.IsWindows {
 			err = forceKillWindowProcess(pid)
@@ -130,6 +148,11 @@ func (rn *Runner) Stop() {
 			color.Red("Failed to kill process: %v", err)
 		} else {
 			color.Yellow("Forcibly killed application (PID: %d) after running for %v", pid, time.Since(rn.started))
+
+			if port != "" {
+				time.Sleep(300 * time.Millisecond)
+				forcePortCleanup(port)
+			}
 		}
 	}
 }

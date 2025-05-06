@@ -56,21 +56,20 @@ gomon --main <path_to_your_main.go>
 If you built the executable on Windows:
 
 ```bash
-gomon.exe --main <path_to_your_main.go>
+ --watch <directory_path>
 ```
 
 ### For web server applications
 
-For web applications, you can specify a custom port:
-
+For web applications, you can specify a custom port and watching directory:
 ```bash
-gomon --main <path_to_your_main.go> --port <port_number>
+gomon --main <path_to_your_main.go> --port <port_number> --watch <directory_path>
 ```
 
 Example:
 
 ```bash
-gomon --main ./cmd/server/main.go --port 8080
+gomon --main ./cmd/server/main.go --port 8080 --watch .
 ```
 
 ## Configuration Options
@@ -79,6 +78,7 @@ gomon --main ./cmd/server/main.go --port 8080
 |--------|-------------|
 | `--main` | Path to your main Go file (required) |
 | `--port` | Port number for web applications (optional) |
+| `--watch` | Directory to watch for changes (default: current directory) |
 
 ## Example
 

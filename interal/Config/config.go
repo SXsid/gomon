@@ -31,9 +31,12 @@ func NewConfig() (*Config, error) {
 		WatchDir: ".",
 		IgnorePattern: []string{
 			"temp", "temp/*",
-			".git/*", "node_modules/*", "vendor/*",
+			".git", ".git/*",
+			"node_modules", "node_modules/*",
+			"vendor", "vendor/*",
 			"*.exe", "*.tmp", "*.log",
 		},
+
 		BuildCMD:  "",
 		RunCMD:    "",
 		Port:      "",
@@ -44,7 +47,7 @@ func NewConfig() (*Config, error) {
 		fmt.Fprintf(os.Stderr, `
 
 Usage:
-  gomon --main <path-to-main.go> [--port <port>]
+  gomon --main <path-to-main.go> [--watch <directory>] [--port <port>]
 
 Flags:
 `)
@@ -52,11 +55,14 @@ Flags:
 		fmt.Fprintln(os.Stderr, `Example:
   gomon --main ./main.go --port 8080`)
 	}
-
+	watchDir := flag.String("watch", config.WatchDir, "Directory to watch for changes (default: current directory)")
 	fileLocation := flag.String("main", "", "Path to the main Go file (e.g., ./cmd/server/main.go)")
-	port := flag.String("port", "", "Port number if the app runs an HTTP server (e.g., 8080)")
+	port := flag.String("port", config.Port, "Port number if the app runs an HTTP server (e.g., 8080)")
 
 	flag.Parse()
+	if *watchDir != config.WatchDir {
+		config.WatchDir = *watchDir
+	}
 
 	if *fileLocation == "" {
 		fmt.Println("Please provide the path to the main Go file using --main")
@@ -66,10 +72,13 @@ Flags:
 	config.IsWindows = runtime.GOOS == "windows"
 
 	if config.IsWindows {
-		config.BuildCMD = fmt.Sprintf("go build -o .\\temp\\gomon.exe %s", *fileLocation)
+		config.BuildCMD = fmt.Sprintf("go build -mod=mod -o .\\temp\\gomon.exe %s", *fileLocation)
+
 		config.RunCMD = ".\\temp\\gomon.exe"
 	} else {
-		config.BuildCMD = fmt.Sprintf("go build -o ./temp/gomon.exe %s", *fileLocation)
+
+		config.BuildCMD = fmt.Sprintf("go build -mod=mod -o ./temp/gomon.exe %s", *fileLocation)
+
 		config.RunCMD = "./temp/gomon.exe"
 	}
 
