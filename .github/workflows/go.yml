@@ -13,33 +13,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: "1.23"
           cache: true
-
+          
       - name: Install CA certificates
-        run: apt-get update && apt-get install -y ca-certificates
-
+        run: sudo apt-get update && sudo apt-get install -y ca-certificates
+        
       - name: Build
         run: go build -v -o gomon ./cmd/gomon
-
+        
       - name: Build for multiple platforms
         run: |
-          mkdir -p dist 
+          mkdir -p dist
           GOOS=linux GOARCH=amd64 go build -o dist/gomon-linux-amd64 ./cmd/gomon
           GOOS=darwin GOARCH=amd64 go build -o dist/gomon-darwin-amd64 ./cmd/gomon
           GOOS=darwin GOARCH=arm64 go build -o dist/gomon-darwin-arm64 ./cmd/gomon
           GOOS=windows GOARCH=amd64 go build -o dist/gomon-windows-amd64.exe ./cmd/gomon
-
+          
       - name: Archive production artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # Updated from v3 to v4
         with:
           name: gomon-binaries
           path: dist/
-
+  
   release:
     name: Create Release
     runs-on: ubuntu-latest
@@ -48,13 +48,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+        
       - name: Download build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4  # Updated from v3 to v4
         with:
           name: gomon-binaries
           path: dist
-
+          
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
