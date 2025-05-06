@@ -11,25 +11,30 @@ import (
 	"github.com/fatih/color"
 )
 
-// Runner manages the execution of a configured command
 type Runner struct {
 	config  *config.Config
 	started time.Time
 	cmd     *exec.Cmd
 }
 
-// NewRunner creates a new runner instance
 func NewRunner(cfg *config.Config) *Runner {
 	return &Runner{
 		config: cfg,
 	}
 }
 
-// Run starts the configured command
 func (rn *Runner) Run() error {
-	// If we already have a running process, stop it first
+
 	if rn.cmd != nil && rn.cmd.Process != nil {
 		rn.Stop()
+
+		if rn.config.IsWindows {
+			time.Sleep(100 * time.Millisecond)
+			if rn.config.Port != "" {
+				forcePortCleanup(rn)
+
+			}
+		}
 	}
 
 	commands := strings.Fields(rn.config.RunCMD)
@@ -42,6 +47,10 @@ func (rn *Runner) Run() error {
 	rn.cmd = exec.Command(commands[0], commands[1:]...)
 	rn.cmd.Stdout = os.Stdout
 	rn.cmd.Stderr = os.Stderr
+	//resue the tcp port
+	if rn.config.IsWindows && rn.config.Port != "" {
+		rn.cmd.Env = append(rn.cmd.Env, "SO_REUSEADDR=1")
+	}
 
 	if err := rn.cmd.Start(); err != nil {
 		color.Red("Failed to start application: %v", err)
@@ -54,10 +63,10 @@ func (rn *Runner) Run() error {
 	// Monitor the process in a goroutine
 	go func() {
 		err := rn.cmd.Wait()
-		// Process has exited; check if it was terminated by the runner or naturally
+
 		if rn.cmd != nil {
 			if err != nil {
-				// Only log non-nil errors if they're not due to a signal we sent
+
 				if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != -1 {
 					color.Yellow("Application exited with error: %v after %v", err, time.Since(rn.started))
 				} else {
@@ -79,19 +88,23 @@ func (rn *Runner) Stop() {
 	}
 
 	process := rn.cmd.Process
+	pid := process.Pid
 	defer func() {
 		rn.cmd = nil
 	}()
+	var err error
 
-	// Try graceful shutdown with SIGTERM
-	err := process.Signal(syscall.SIGTERM)
+	if rn.config.IsWindows {
+		err = terminateWindowProcess(pid)
+	} else {
+		err = process.Signal(syscall.SIGTERM)
+	}
 	if err != nil {
 		// Process already gone
 		color.Yellow("Process already terminated")
 		return
 	}
 
-	// Give the process time to shut down gracefully
 	gracePeriod := 500 * time.Millisecond
 	timeout := time.After(gracePeriod)
 
@@ -101,16 +114,22 @@ func (rn *Runner) Stop() {
 		close(done)
 	}()
 
-	// Wait for either the process to exit or the timeout
 	select {
 	case <-done:
-		color.Yellow("Stopped application (PID: %d) gracefully after running for %v", process.Pid, time.Since(rn.started))
+		color.Yellow("Stopped application (PID: %d) gracefully after running for %v", pid, time.Since(rn.started))
 	case <-timeout:
 		// Process didn't exit gracefully, force kill it
-		if err := process.Kill(); err != nil {
+		var err error
+		if rn.config.IsWindows {
+			err = forceKillWindowProcess(pid)
+		} else {
+			err = process.Kill()
+		}
+
+		if err != nil {
 			color.Red("Failed to kill process: %v", err)
 		} else {
-			color.Yellow("Forcibly killed application (PID: %d) after running for %v", process.Pid, time.Since(rn.started))
+			color.Yellow("Forcibly killed application (PID: %d) after running for %v", pid, time.Since(rn.started))
 		}
 	}
 }

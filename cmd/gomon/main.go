@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 
 	config "github.com/SXsid/gomon/interal/Config"
@@ -18,31 +17,14 @@ import (
 func main() {
 	//r
 	// fomon <paht of main.go file>
-	args := os.Args
-	if len(args) != 2 || args[1] == "--help" || args[1] == "-h" {
-		fmt.Print(`
-gomon - Hot reload for Go applications
 
-Usage:
-  gomon <path-to-main.go>
+	printBanner()
+	cfg, err := config.NewConfig()
 
-Example:
-  gomon ./main.go
-
-This will watch your Go files, rebuild the binary, and restart on changes.
-`)
+	if err != nil {
 		return
 	}
-	printBanner()
-	cfg := config.NewConfig()
-	if runtime.GOOS == "windows" {
-		cfg.BuildCMD = fmt.Sprintf("go build -o .\\temp\\gomon.exe %s", args[1])
-		cfg.RunCMD = ".\\temp\\gomon.exe"
-	} else {
-		cfg.BuildCMD = fmt.Sprintf("go build -o ./temp/gomon.exe %s", args[1])
-		cfg.RunCMD = "./temp/gomon.exe"
-	}
-
+	fmt.Println(cfg.Port)
 	appRunner := runner.NewRunner(cfg)
 
 	appBuilder := builder.NewBuilder(cfg)
