@@ -1,28 +1,62 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
-name: Go
+name: Gomon CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
+    tags:
+      - "v*"
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.20'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+          cache: true
 
-    - name: Build
-      run: go build -v ./...
+      - name: Build
+        run: go build -v -o gomon ./cmd/gomon
+      - name: Build for multiple platforms
+        run: |
+          mkdir -p dist 
+          GOOS=linux GOARCH=amd64 go build -o dist/gomon-linux-amd64 ./cmd/gomon
+          GOOS=darwin GOARCH=amd64 go build -o dist/gomon-darwin-amd64 ./cmd/gomon
+          GOOS=darwin GOARCH=arm64 go build -o dist/gomon-darwin-arm64 ./cmd/gomon
+          GOOS=windows GOARCH=amd64 go build -o dist/gomon-windows-amd64.exe ./cmd/gomon
 
-    - name: Test
-      run: go test -v ./...
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: gomon-binaries
+          path: dist/
+  release:
+    name: create Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: gomon-binaries
+          path: dist
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/gomon-linux-amd64
+            dist/gomon-darwin-amd64
+            dist/gomon-darwin-arm64
+            dist/gomon-windows-amd64.exe
+          draft: false
+          prerelease: false
+          generate_release_notes: true
